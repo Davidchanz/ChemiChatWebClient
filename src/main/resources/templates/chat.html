@@ -1,0 +1,150 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<link type="text/css" th:href="@{/styles/chat.css}" rel="stylesheet" />
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+<!--<script defer="defer" referrerpolicy="origin" th:src="@{/scripts/stomp.js}"></script>-->
+<script th:inline="javascript">
+    var stompClient = null;
+var token = fetch("http://localhost:8081/getToken");
+console.log(token);
+
+const socket = new SockJS('http://localhost:8080/ws', {
+  transportOptions: {
+    'xhr-streaming': {
+      headers: {
+        "Authorization": `Bearer ` + token
+      }
+    }
+  }
+});
+stompClient = Stomp.over(socket);
+</script>
+<div id="content">
+    <div id="navigation-bar">
+        <div id="user-info">
+            <span id="username" th:text="${username}"></span>
+            <a th:href="@{/logout}" id="logout">Logout</a>
+        </div>
+        <div id="room-list">
+            <div th:each="room : ${rooms}" th:remove="tag">
+                <a class="room" th:href="@{/room(roomId=${room.Id})}" th:text="${room.name}"></a>
+<!--                <script defer="defer" referrerpolicy="origin" th:src="@{/scripts/subscribe.js}"></script>-->
+                <script th:inline="javascript">
+                console.log("sdfgh");
+                 /*<![CDATA[*/
+
+                    var username = /*[[${username}]]*/ 'default';
+
+                /*]]>*/
+                function show(message = {}) {
+                  var history = document.getElementById('chat-history');
+                  var newMessageDiv = document.createElement('div');
+                  var newMessageSpan = document.createElement('span');
+                  var mess = message.text;
+                  var from = message.from;
+                  if(from == username){
+                    newMessageDiv.classList.add("message");
+                    newMessageDiv.classList.add("outgoing");
+                    newMessageSpan.classList.add("message-text");
+                    newMessageSpan.textContent = mess;
+                    newMessageDiv.appendChild(newMessageSpan);
+
+                  }else{
+                    newMessageDiv.classList.add("message");
+                    newMessageDiv.classList.add("incoming");
+                    newMessageSpan.classList.add("message-text");
+                    newMessageSpan.textContent = mess;
+                    newMessageDiv.appendChild(newMessageSpan);
+                  }
+                  history.appendChild(newMessageDiv);
+                  history.scrollTo(0, history.scrollHeight);
+                }
+
+                    function subscribe(to){
+                    stompClient.connect({
+                      'Authorization': `Bearer ` + token
+                    }, function(frame) {
+                        console.log(frame);
+                        stompClient.subscribe('/specific/'+to, function(result) {
+                            console.log(JSON.parse(result.body));
+                            show(JSON.parse(result.body));
+                            console.log("sub on " + to);
+                        });
+                    });
+                }
+
+
+
+                /*<![CDATA[*/
+
+                    var roomname = /*[[${room.name}]]*/ 'default';
+                    //console.log(roomname);
+                    console.log(token);
+                    subscribe(roomname);
+
+                /*]]>*/
+                </script>
+            </div>
+        </div>
+    </div>
+    <div id="chat">
+        <div id="chat-history">
+            <div th:if="${activeRoom != null}" th:remove="tag">
+                <div th:each="mess : ${history}" th:remove="tag">
+                    <div th:if="${mess.from} == ${username}" th:remove="tag">
+                        <div class="message outgoing">
+                            <span class="message-text" th:text="${mess.text}"></span>
+                        </div>
+                    </div>
+                    <div th:unless="${mess.from} == ${username}" th:remove="tag">
+                        <div class="message incoming">
+                            <span class="message-text" th:text="${mess.text}"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form id="message-inpute" th:action="@{/send}" th:object="${message}" method="post">
+            <input th:field="*{text}" placeholder="Enter message..." type="text" id="input-message"/>
+            <div th:if="${activeRoom != null}" th:remove="tag">
+                <span id="input-username" style="display: none;" th:text="${username}"></span>
+                <span id="input-roomname" style="display: none;" th:text="${activeRoom.name}"></span>
+                <button class="send btn" type="submit">Send</button>
+            </div>
+            <div th:unless="${activeRoom != null}" th:remove="tag">
+                <button disabled class="send btn" type="submit">Send</button>
+            </div>
+<!--            <script th:inline="javascript">-->
+<!--                const form = document.getElementById('message-inpute');-->
+<!--                const input = document.getElementById('input-message');-->
+<!--                let action = form.action;-->
+<!--                form.addEventListener('submit', (event) => {-->
+<!--                  event.preventDefault();-->
+<!--                  fetch(action, {method: 'POST'})-->
+<!--                  input.value = "";-->
+<!--                });-->
+<!--            </script>-->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+            <script defer="defer" referrerpolicy="origin" th:src="@{/scripts/sendMessage.js}"></script>
+            <script th:inline="javascript">
+                const form = document.getElementById('message-inpute');
+                const input = document.getElementById('input-message');
+                const inputUsername = document.getElementById('input-username');
+                const inputRoomname = document.getElementById('input-roomname');
+                let action = form.action;
+                form.addEventListener('submit', (event) => {
+                  event.preventDefault();
+
+console.log(inputUsername);
+                  sendMessage(inputUsername.innerHTML, inputRoomname.innerHTML, input.value);
+
+                  input.value = "";
+                });
+            </script>
+        </form>
+    </div>
+</div>
+</body>
+</html>
